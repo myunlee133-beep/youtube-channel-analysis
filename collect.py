@@ -87,6 +87,8 @@ def fetch_video_detail(video_id: str, with_comments: bool, max_comments: int):
         "quiet": True,
         "skip_download": True,
         "ignoreerrors": True,
+        "noplaylist": True,
+        "socket_timeout": 30,
     }
     if with_comments:
         opts["getcomments"] = True
@@ -122,14 +124,20 @@ def collect_channel(channel, max_videos=100, with_comments=False,
     log(f"[2/3] 영상 상세 수집 (댓글 수집={with_comments})")
     videos = []
     comments_rows = []
+    failures = []
     for i, vid in enumerate(ids, 1):
         want_comments = with_comments and i <= comment_videos
         try:
-            info = fetch_video_detail(vid, want_comments, max_comments)
+            info = fetch_video_detail(vid, False, max_comments)
         except Exception as e:
-            log(f"      ! {vid} 실패: {e}")
+            message = f"{vid} 상세정보 실패: {e}"
+            failures.append(message)
+            log(f"      ! {message}")
             continue
         if not info:
+            message = f"{vid} 상세정보 실패: yt-dlp가 빈 응답을 반환했습니다."
+            failures.append(message)
+            log(f"      ! {message}")
             continue
         row = {k: info.get(k) for k in VIDEO_FIELDS}
         if isinstance(row.get("categories"), list):
@@ -139,21 +147,30 @@ def collect_channel(channel, max_videos=100, with_comments=False,
         videos.append(row)
 
         if want_comments:
-            for c in (info.get("comments") or []):
-                comments_rows.append({
-                    "video_id": vid,
-                    "video_title": info.get("title"),
-                    "author": c.get("author"),
-                    "text": (c.get("text") or "").replace("\n", " ").strip(),
-                    "like_count": c.get("like_count"),
-                    "timestamp": c.get("timestamp"),
-                })
+            try:
+                comment_info = fetch_video_detail(vid, True, max_comments)
+                for c in ((comment_info or {}).get("comments") or []):
+                    comments_rows.append({
+                        "video_id": vid,
+                        "video_title": info.get("title"),
+                        "author": c.get("author"),
+                        "text": (c.get("text") or "").replace("\n", " ").strip(),
+                        "like_count": c.get("like_count"),
+                        "timestamp": c.get("timestamp"),
+                    })
+            except Exception as e:
+                log(f"      ! {vid} 댓글 수집 실패: {e}")
         log(f"      [{i}/{len(ids)}] {str(info.get('title'))[:40]}  "
             f"views={info.get('view_count')}")
         time.sleep(sleep)
 
     if not videos:
-        raise RuntimeError("영상 상세 정보를 수집하지 못했습니다.")
+        detail = " / ".join(failures[:3]) if failures else "상세 실패 로그 없음"
+        raise RuntimeError(
+            "영상 상세 정보를 수집하지 못했습니다. "
+            "채널 URL이 맞는지 확인하고, Render 같은 클라우드에서는 YouTube가 요청을 막을 수 있습니다. "
+            f"첫 실패: {detail}"
+        )
 
     log("[3/3] CSV 저장")
     videos_path = os.path.join(data_dir, "videos.csv")
