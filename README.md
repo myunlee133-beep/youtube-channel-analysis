@@ -33,12 +33,13 @@ docker run --rm -p 8000:8000 -v "$(pwd)/runs:/app/runs" youtube-channel-analysis
 - 포트: 환경변수 `PORT` 사용
 - 시작 명령: `python app.py`
 - 환경변수: `HOST=0.0.0.0`, `RUNS_DIR=/app/runs`
-- 영구 저장소가 있는 플랫폼이면 `/app/runs`를 persistent disk/volume에 연결하세요.
+- 무료 테스트 배포에서는 분석 결과가 서버 재시작/재배포 때 사라질 수 있습니다.
+- 결과를 계속 보관하려면 유료 persistent disk/volume을 `/app/runs`에 연결하세요.
 
 ### Render에서 배포
 1. 이 폴더를 GitHub 저장소로 push합니다.
 2. Render에서 **New → Blueprint**를 선택하고 저장소를 연결합니다.
-3. `render.yaml`이 자동으로 웹 서비스, 헬스체크, `/app/runs` 디스크를 설정합니다.
+3. `render.yaml`이 무료 웹 서비스와 헬스체크를 자동 설정합니다.
 
 ### Railway에서 배포
 1. 이 폴더를 GitHub 저장소로 push합니다.
