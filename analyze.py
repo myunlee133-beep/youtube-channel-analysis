@@ -70,6 +70,18 @@ def load_videos(data_dir):
     return df.sort_values("upload_date")
 
 
+def monthly_view_summary(d):
+    """pandas 버전에 따라 월말 offset alias가 M 또는 ME로 갈려 폴백 처리."""
+    series = d.set_index("upload_date")["view_count"]
+    for freq in ("ME", "M"):
+        try:
+            return series.resample(freq).agg(["mean", "count"])
+        except ValueError as exc:
+            if "Invalid frequency" not in str(exc) and "no longer supported" not in str(exc):
+                raise
+    return series.resample("MS").agg(["mean", "count"])
+
+
 # ---- 1) 조회수 시계열 ----------------------------------------------
 def analyze_timeseries(df, out_dir):
     d = df.dropna(subset=["upload_date", "view_count"])
@@ -88,8 +100,7 @@ def analyze_timeseries(df, out_dir):
 
     # (b) 월별 평균/합계 조회수
     ax = axes[0, 1]
-    monthly = d.set_index("upload_date").resample("M")["view_count"].agg(
-        ["mean", "count"])
+    monthly = monthly_view_summary(d)
     ax.bar(monthly.index, monthly["mean"], width=20, alpha=0.7)
     ax.set_title("월별 평균 조회수")
     ax.set_ylabel("평균 조회수")
