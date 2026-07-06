@@ -43,8 +43,37 @@ def normalize_channel_url(target: str) -> str:
     return f"https://www.youtube.com/@{target}/videos"
 
 
-def list_video_ids(channel_url: str, max_videos: int):
-    """flat 추출로 영상 ID 목록만 빠르게 가져온다."""
+def _collect_flat_entries(entry, out):
+    if not entry:
+        return
+    if entry.get("_type") == "playlist" and entry.get("entries"):
+        for sub in entry["entries"]:
+            _collect_flat_entries(sub, out)
+        return
+    video_id = entry.get("id")
+    if not video_id:
+        return
+    url = entry.get("webpage_url") or entry.get("url")
+    if not url or not str(url).startswith("http"):
+        url = f"https://www.youtube.com/watch?v={video_id}"
+    out.append({
+        "id": video_id,
+        "title": entry.get("title"),
+        "upload_date": entry.get("upload_date"),
+        "duration": entry.get("duration"),
+        "view_count": entry.get("view_count"),
+        "like_count": entry.get("like_count"),
+        "comment_count": entry.get("comment_count"),
+        "channel": entry.get("channel"),
+        "channel_id": entry.get("channel_id"),
+        "categories": entry.get("categories"),
+        "tags": entry.get("tags"),
+        "webpage_url": url,
+    })
+
+
+def list_video_entries(channel_url: str, max_videos: int):
+    """flat 추출로 영상 기본 정보 목록을 빠르게 가져온다."""
     if yt_dlp is None:
         raise RuntimeError("yt-dlp가 필요합니다: pip install -r requirements.txt")
     opts = {
@@ -54,29 +83,28 @@ def list_video_ids(channel_url: str, max_videos: int):
         "ignoreerrors": True,
         "playlistend": max_videos if max_videos else None,
     }
-    ids = []
+    entries_out = []
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(channel_url, download=False)
         entries = info.get("entries") or []
         for e in entries:
-            if not e:
-                continue
             # 채널 페이지는 탭/플레이리스트가 중첩될 수 있음
-            if e.get("_type") == "playlist" and e.get("entries"):
-                for sub in e["entries"]:
-                    if sub and sub.get("id"):
-                        ids.append(sub["id"])
-            elif e.get("id"):
-                ids.append(e["id"])
+            _collect_flat_entries(e, entries_out)
     # 중복 제거(순서 유지)
     seen, out = set(), []
-    for vid in ids:
+    for entry in entries_out:
+        vid = entry["id"]
         if vid not in seen:
             seen.add(vid)
-            out.append(vid)
+            out.append(entry)
     if max_videos:
         out = out[:max_videos]
     return out
+
+
+def list_video_ids(channel_url: str, max_videos: int):
+    """flat 추출로 영상 ID 목록만 빠르게 가져온다."""
+    return [entry["id"] for entry in list_video_entries(channel_url, max_videos)]
 
 
 def fetch_video_detail(video_id: str, with_comments: bool, max_comments: int):
@@ -86,7 +114,7 @@ def fetch_video_detail(video_id: str, with_comments: bool, max_comments: int):
     opts = {
         "quiet": True,
         "skip_download": True,
-        "ignoreerrors": True,
+        "ignoreerrors": False,
         "noplaylist": True,
         "socket_timeout": 30,
     }
@@ -116,30 +144,38 @@ def collect_channel(channel, max_videos=100, with_comments=False,
     os.makedirs(data_dir, exist_ok=True)
     channel_url = normalize_channel_url(channel)
     log(f"[1/3] 영상 목록 수집: {channel_url}")
-    ids = list_video_ids(channel_url, max_videos)
-    log(f"      → {len(ids)}개 영상 발견")
-    if not ids:
+    entries = list_video_entries(channel_url, max_videos)
+    log(f"      → {len(entries)}개 영상 발견")
+    if not entries:
         raise RuntimeError("영상을 찾지 못했습니다. URL/핸들을 확인하세요.")
 
     log(f"[2/3] 영상 상세 수집 (댓글 수집={with_comments})")
     videos = []
     comments_rows = []
     failures = []
-    for i, vid in enumerate(ids, 1):
+    used_flat_fallback = 0
+    for i, flat in enumerate(entries, 1):
+        vid = flat["id"]
         want_comments = with_comments and i <= comment_videos
+        had_detail_error = False
         try:
             info = fetch_video_detail(vid, False, max_comments)
         except Exception as e:
             message = f"{vid} 상세정보 실패: {e}"
             failures.append(message)
             log(f"      ! {message}")
-            continue
-        if not info:
+            had_detail_error = True
+            info = None
+        if not info and not had_detail_error:
             message = f"{vid} 상세정보 실패: yt-dlp가 빈 응답을 반환했습니다."
             failures.append(message)
             log(f"      ! {message}")
-            continue
+        if not info:
+            info = flat
+            used_flat_fallback += 1
         row = {k: info.get(k) for k in VIDEO_FIELDS}
+        row["id"] = row.get("id") or vid
+        row["webpage_url"] = row.get("webpage_url") or f"https://www.youtube.com/watch?v={vid}"
         if isinstance(row.get("categories"), list):
             row["categories"] = "|".join(row["categories"] or [])
         if isinstance(row.get("tags"), list):
@@ -160,7 +196,7 @@ def collect_channel(channel, max_videos=100, with_comments=False,
                     })
             except Exception as e:
                 log(f"      ! {vid} 댓글 수집 실패: {e}")
-        log(f"      [{i}/{len(ids)}] {str(info.get('title'))[:40]}  "
+        log(f"      [{i}/{len(entries)}] {str(info.get('title'))[:40]}  "
             f"views={info.get('view_count')}")
         time.sleep(sleep)
 
@@ -171,6 +207,8 @@ def collect_channel(channel, max_videos=100, with_comments=False,
             "채널 URL이 맞는지 확인하고, Render 같은 클라우드에서는 YouTube가 요청을 막을 수 있습니다. "
             f"첫 실패: {detail}"
         )
+    if used_flat_fallback:
+        log(f"      ! 상세정보 실패 {used_flat_fallback}건은 채널 목록의 기본 정보로 대체했습니다.")
 
     log("[3/3] CSV 저장")
     videos_path = os.path.join(data_dir, "videos.csv")
