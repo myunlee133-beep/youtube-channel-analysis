@@ -1,0 +1,87 @@
+# 유튜브 채널 분석 도구
+
+API 키 없이 **yt-dlp**로 채널 데이터를 수집해, 댓글 텍스트 마이닝·조회수 시계열·영상 길이·제목/장르를 분석합니다. 한국어에 맞춰 한글 폰트와 명사 추출을 지원합니다.
+
+## 설치
+```bash
+pip install -r requirements.txt
+# (선택) 명사 추출 정확도 ↑ — Java 설치 후
+pip install konlpy
+```
+
+## 웹 파이프라인 실행
+```bash
+python app.py
+```
+브라우저에서 `http://localhost:8000`을 열면 다른 유튜버의 `@핸들`, 채널 ID(`UC...`), 또는 채널 URL을 입력해 수집·분석·리포트 생성을 한 번에 실행할 수 있습니다.
+
+- 실행 결과는 `runs/분석ID/data/`, `runs/분석ID/output/`에 채널별로 분리 저장됩니다.
+- 웹 화면에서 진행 로그, 차트, 조회수 상위 영상, 최근 업로드 영상, CSV/Markdown 다운로드를 확인할 수 있습니다.
+- 댓글 수집은 오래 걸릴 수 있으므로 웹 옵션에서 댓글 영상 수와 영상당 댓글 수를 조절하세요.
+
+## 배포
+이 앱은 유튜브 데이터를 수집하고 Python 분석을 실행하는 서버형 앱입니다. GitHub Pages 같은 정적 호스팅이 아니라 Docker 또는 Python 웹 서비스를 지원하는 플랫폼에 배포하세요.
+
+### Docker로 실행
+```bash
+docker build -t youtube-channel-analysis .
+docker run --rm -p 8000:8000 -v "$(pwd)/runs:/app/runs" youtube-channel-analysis
+```
+
+### 클라우드 배포 권장 설정
+- 빌드 방식: Dockerfile
+- 포트: 환경변수 `PORT` 사용
+- 시작 명령: `python app.py`
+- 환경변수: `HOST=0.0.0.0`, `RUNS_DIR=/app/runs`
+- 영구 저장소가 있는 플랫폼이면 `/app/runs`를 persistent disk/volume에 연결하세요.
+
+### 배포 전 주의
+- 댓글 수집은 오래 걸리고 요청량이 많습니다. 공개 서비스에서는 기본 영상 수와 댓글 수를 낮게 잡는 것이 좋습니다.
+- yt-dlp 기반 수집은 유튜브 페이지 구조나 차단 정책 변화의 영향을 받을 수 있습니다.
+- 여러 사람이 동시에 실행하면 서버 자원을 많이 씁니다. 현재 앱은 한 번에 한 분석만 실행하도록 잠금 처리되어 있습니다.
+
+## 1) 데이터 수집
+```bash
+# 기본: 최근 100개 영상 메타데이터만
+python collect.py "@채널핸들"
+
+# 댓글까지 (상위 20개 영상, 영상당 최대 200개)
+python collect.py "@채널핸들" --max-videos 150 --with-comments --comment-videos 20 --max-comments 200
+```
+채널은 `@핸들`, 채널ID(`UC...`), 전체 URL 모두 인식합니다. 결과는 `data/videos.csv`, `data/comments.csv`로 저장됩니다.
+
+## 2) 분석
+```bash
+python analyze.py
+```
+`output/` 폴더에 차트와 `summary.md`가 생성됩니다.
+
+| 파일 | 내용 |
+|------|------|
+| `01_timeseries.png` | 업로드일별 조회수, 월별 평균, 업로드 편수, 누적 조회수 |
+| `02_duration.png` | 길이 분포, 길이 vs 조회수, 숏폼 vs 롱폼 |
+| `03_titles.png` | 제목 키워드 상위 20, 카테고리(장르) 분포 |
+| `04_title_length.png` | 제목 길이 vs 조회수 |
+| `05_comment_keywords.png` | 댓글 키워드 상위 25 |
+| `06_comment_wordcloud.png` | 댓글 워드클라우드 |
+| `07_comment_sentiment.png` | 댓글 단순 감성 분포 |
+
+## 3) 노트북
+셀 단위로 살펴보려면 `youtube_analysis.ipynb`를 여세요.
+
+## 파일 구성
+```
+collect.py              데이터 수집 (yt-dlp)
+analyze.py              전체 분석 + 차트 생성
+app.py                  웹 파이프라인 서버
+web/                    웹 UI
+koreatext.py            한글 폰트 탐색 · 토크나이저 · 단순 감성사전
+youtube_analysis.ipynb  주피터 노트북
+requirements.txt        의존성
+```
+
+## 참고 / 한계
+- yt-dlp의 `view_count`는 **수집 시점의 누적 조회수 스냅샷**입니다. 특정 영상의 시간별 조회수 곡선은 유튜브가 공개하지 않으므로, 시계열은 **업로드일 기준 집계**로 봅니다. 진짜 시간별 추이가 필요하면 `collect.py`를 주기적으로(예: 매일) 돌려 스냅샷을 쌓으세요.
+- 댓글 수집은 느립니다. `--comment-videos`, `--max-comments`로 범위를 조절하세요.
+- `konlpy` 미설치 시 정규식 기반(2글자 이상 한글 어절)으로 폴백합니다. 불용어는 `koreatext.py`의 `DEFAULT_STOPWORDS`에서 조정하세요.
+- 과도한 요청은 차단될 수 있으니 `--sleep` 값을 늘리세요.

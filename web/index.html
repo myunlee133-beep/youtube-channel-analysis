@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>유튜브 채널 분석 파이프라인</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">YT</span>
+        <span>채널 분석 파이프라인</span>
+      </div>
+      <span class="server-state" id="serverState">대기</span>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel run-panel">
+          <h1>분석 실행</h1>
+          <form id="analysisForm">
+            <label class="field">
+              <span>채널</span>
+              <input id="channelInput" name="channel" type="text" placeholder="@handle 또는 URL" autocomplete="off" required>
+            </label>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>영상 수</span>
+                <input id="maxVideosInput" name="maxVideos" type="number" min="1" max="500" step="1" value="80">
+              </label>
+              <label class="field">
+                <span>대기 초</span>
+                <input id="sleepInput" name="sleep" type="number" min="0" max="5" step="0.1" value="0.5">
+              </label>
+            </div>
+
+            <label class="toggle">
+              <input id="withCommentsInput" name="withComments" type="checkbox">
+              <span>댓글 포함</span>
+            </label>
+
+            <div class="field-grid comment-options" id="commentOptions">
+              <label class="field">
+                <span>댓글 영상</span>
+                <input id="commentVideosInput" name="commentVideos" type="number" min="1" max="100" step="1" value="10" disabled>
+              </label>
+              <label class="field">
+                <span>영상당 댓글</span>
+                <input id="maxCommentsInput" name="maxComments" type="number" min="1" max="500" step="1" value="100" disabled>
+              </label>
+            </div>
+
+            <button class="primary-button" type="submit">
+              <span aria-hidden="true">▶</span>
+              <span>분석 시작</span>
+            </button>
+          </form>
+        </section>
+
+        <section class="panel history-panel">
+          <div class="section-title">
+            <h2>히스토리</h2>
+            <button class="icon-button" id="refreshRunsButton" type="button" title="새로고침" aria-label="히스토리 새로고침">↻</button>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <section class="panel job-panel hidden" id="jobPanel">
+          <div class="job-heading">
+            <div>
+              <h2 id="jobTitle">작업 진행 중</h2>
+              <p id="jobSubtitle"></p>
+            </div>
+            <strong id="jobPercent">0%</strong>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <ol class="log-list" id="logList"></ol>
+        </section>
+
+        <section class="empty-state" id="emptyState">
+          <div>
+            <h2>분석 결과</h2>
+            <p>저장된 결과를 불러오는 중입니다.</p>
+          </div>
+        </section>
+
+        <section class="result-area hidden" id="resultArea">
+          <div class="result-header">
+            <div>
+              <p class="eyebrow" id="resultRunId"></p>
+              <h2 id="resultTitle">채널명</h2>
+              <p id="resultSubtitle"></p>
+            </div>
+            <div class="result-actions" id="resultActions"></div>
+          </div>
+
+          <div class="metric-grid" id="metricGrid"></div>
+
+          <nav class="tabs" aria-label="결과 보기">
+            <button class="tab active" type="button" data-view="summary">요약</button>
+            <button class="tab" type="button" data-view="charts">차트</button>
+            <button class="tab" type="button" data-view="videos">영상</button>
+            <button class="tab" type="button" data-view="files">파일</button>
+          </nav>
+
+          <section class="view active" id="summaryView"></section>
+          <section class="view" id="chartsView"></section>
+          <section class="view" id="videosView"></section>
+          <section class="view" id="filesView"></section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

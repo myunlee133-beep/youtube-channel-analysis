@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: youtube-channel-analysis
+    env: docker
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: analysis-runs
+      mountPath: /app/runs
+      sizeGB: 1
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: RUNS_DIR
+        value: /app/runs

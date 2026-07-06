@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.DS_Store
+.git
+.gitignore
+
+data
+output
+runs
+youtube_analysis.ipynb

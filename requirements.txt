@@ -1,0 +1,7 @@
+yt-dlp>=2024.1.0
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+wordcloud>=1.9
+# 선택: 한국어 형태소(명사) 분석 정확도 향상 (Java 필요)
+# konlpy>=0.6
