@@ -18,6 +18,18 @@ python app.py
 - 실행 결과는 `runs/분석ID/data/`, `runs/분석ID/output/`에 채널별로 분리 저장됩니다.
 - 웹 화면에서 진행 로그, 차트, 조회수 상위 영상, 최근 업로드 영상, CSV/Markdown 다운로드를 확인할 수 있습니다.
 - 댓글 수집은 오래 걸릴 수 있으므로 웹 옵션에서 댓글 영상 수와 영상당 댓글 수를 조절하세요.
+- `YOUTUBE_API_KEY` 환경변수가 있으면 yt-dlp 대신 공식 YouTube Data API v3로 수집합니다.
+
+## YouTube Data API 키 사용
+Render 같은 클라우드에서 yt-dlp가 막히면 공식 API 키 방식을 사용하세요.
+
+1. Google Cloud Console에서 프로젝트를 만들거나 기존 프로젝트를 선택합니다.
+2. **APIs & Services → Library**에서 **YouTube Data API v3**를 Enable 합니다.
+3. **APIs & Services → Credentials → Create credentials → API key**를 선택합니다.
+4. Render 서비스의 **Environment**에 `YOUTUBE_API_KEY`를 추가하고 값을 API 키로 설정합니다.
+5. Render에서 **Manual Deploy → Deploy latest commit**을 실행합니다.
+
+공식 API 경로는 `channels.list`로 채널과 업로드 플레이리스트를 찾고, `playlistItems.list`로 업로드 영상 목록을 가져온 뒤, `videos.list`로 조회수/좋아요/댓글수/길이를 채웁니다. 댓글 포함 옵션은 `commentThreads.list`를 사용합니다.
 
 ## 배포
 이 앱은 유튜브 데이터를 수집하고 Python 분석을 실행하는 서버형 앱입니다. GitHub Pages 같은 정적 호스팅이 아니라 Docker 또는 Python 웹 서비스를 지원하는 플랫폼에 배포하세요.
@@ -32,7 +44,7 @@ docker run --rm -p 8000:8000 -v "$(pwd)/runs:/app/runs" youtube-channel-analysis
 - 빌드 방식: Dockerfile
 - 포트: 환경변수 `PORT` 사용
 - 시작 명령: `python app.py`
-- 환경변수: `HOST=0.0.0.0`, `RUNS_DIR=/app/runs`
+- 환경변수: `HOST=0.0.0.0`, `RUNS_DIR=/app/runs`, `YOUTUBE_API_KEY=발급받은_API_키`
 - 무료 테스트 배포에서는 분석 결과가 서버 재시작/재배포 때 사라질 수 있습니다.
 - 결과를 계속 보관하려면 유료 persistent disk/volume을 `/app/runs`에 연결하세요.
 

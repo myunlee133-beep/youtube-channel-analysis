@@ -9,3 +9,5 @@ services:
         value: 0.0.0.0
       - key: RUNS_DIR
         value: /app/runs
+      - key: YOUTUBE_API_KEY
+        sync: false
