@@ -35,6 +35,16 @@ docker run --rm -p 8000:8000 -v "$(pwd)/runs:/app/runs" youtube-channel-analysis
 - 환경변수: `HOST=0.0.0.0`, `RUNS_DIR=/app/runs`
 - 영구 저장소가 있는 플랫폼이면 `/app/runs`를 persistent disk/volume에 연결하세요.
 
+### Render에서 배포
+1. 이 폴더를 GitHub 저장소로 push합니다.
+2. Render에서 **New → Blueprint**를 선택하고 저장소를 연결합니다.
+3. `render.yaml`이 자동으로 웹 서비스, 헬스체크, `/app/runs` 디스크를 설정합니다.
+
+### Railway에서 배포
+1. 이 폴더를 GitHub 저장소로 push합니다.
+2. Railway에서 **New Project → Deploy from GitHub repo**를 선택합니다.
+3. `railway.json`과 `Dockerfile`이 자동으로 빌드/헬스체크를 설정합니다.
+
 ### 배포 전 주의
 - 댓글 수집은 오래 걸리고 요청량이 많습니다. 공개 서비스에서는 기본 영상 수와 댓글 수를 낮게 잡는 것이 좋습니다.
 - yt-dlp 기반 수집은 유튜브 페이지 구조나 차단 정책 변화의 영향을 받을 수 있습니다.
