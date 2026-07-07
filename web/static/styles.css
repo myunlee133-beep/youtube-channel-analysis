@@ -574,6 +574,11 @@ form {
   padding: 18px;
 }
 
+.summary-box h3 {
+  margin: 0 0 13px;
+  font-size: 1rem;
+}
+
 .summary-box pre {
   margin: 0;
   overflow: auto;
@@ -613,6 +618,101 @@ form {
   gap: 8px;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(280px, 1.15fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.product-metrics {
+  display: grid;
+  gap: 10px;
+}
+
+.product-metrics div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 42px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.product-metrics div:last-child {
+  border-bottom: 0;
+}
+
+.product-metrics span,
+.intent-row span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.product-metrics strong,
+.intent-row strong {
+  font-size: 1rem;
+}
+
+.intent-list {
+  display: grid;
+  gap: 8px;
+}
+
+.intent-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #f8faf9;
+}
+
+.example-panel {
+  padding-bottom: 4px;
+}
+
+.example-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.example-card {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.example-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--teal);
+  font-size: 0.82rem;
+}
+
+.example-card p {
+  color: #2f3b3e;
+  line-height: 1.55;
+}
+
+.example-card small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chart-grid {
@@ -766,6 +866,7 @@ td.number {
 
   .sidebar,
   .summary-grid,
+  .product-grid,
   .chart-grid {
     grid-template-columns: 1fr;
   }

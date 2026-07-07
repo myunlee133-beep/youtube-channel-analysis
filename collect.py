@@ -321,7 +321,13 @@ def video_rows_with_api(video_ids, channel_info, api_key):
     return sorted(rows, key=lambda row: order.get(row["id"], 10**9))
 
 
-def comments_with_api(video_id, video_title, max_comments, api_key):
+COMMENT_FIELDS = [
+    "video_id", "video_title", "author", "author_channel_id", "is_channel_owner",
+    "text", "like_count", "timestamp",
+]
+
+
+def comments_with_api(video_id, video_title, max_comments, api_key, channel_id=None):
     rows = []
     page_token = None
     while len(rows) < max_comments:
@@ -341,10 +347,17 @@ def comments_with_api(video_id, video_title, max_comments, api_key):
                 .get("topLevelComment", {})
                 .get("snippet", {})
             )
+            author_channel_id = (
+                top.get("authorChannelId", {}).get("value")
+                if isinstance(top.get("authorChannelId"), dict)
+                else top.get("authorChannelId")
+            )
             rows.append({
                 "video_id": video_id,
                 "video_title": video_title,
                 "author": top.get("authorDisplayName"),
+                "author_channel_id": author_channel_id,
+                "is_channel_owner": bool(channel_id and author_channel_id == channel_id),
                 "text": (top.get("textDisplay") or top.get("textOriginal") or "").replace("\n", " ").strip(),
                 "like_count": safe_int(top.get("likeCount")),
                 "timestamp": top.get("publishedAt"),
@@ -388,7 +401,13 @@ def collect_channel_with_api(channel, max_videos=100, with_comments=False,
         log("[2/3] 댓글 수집")
         for i, row in enumerate(videos[:comment_videos], 1):
             try:
-                rows = comments_with_api(row["id"], row["title"], max_comments, api_key)
+                rows = comments_with_api(
+                    row["id"],
+                    row["title"],
+                    max_comments,
+                    api_key,
+                    channel_id=channel_info.get("id"),
+                )
                 comments_rows.extend(rows)
                 log(f"      [{i}/{min(comment_videos, len(videos))}] {row['title'][:40]} 댓글 {len(rows)}개")
             except Exception as e:
@@ -406,9 +425,7 @@ def collect_channel_with_api(channel, max_videos=100, with_comments=False,
     if comments_rows:
         comments_path = os.path.join(data_dir, "comments.csv")
         with open(comments_path, "w", newline="", encoding="utf-8-sig") as f:
-            w = csv.DictWriter(
-                f, fieldnames=["video_id", "video_title", "author", "text",
-                               "like_count", "timestamp"])
+            w = csv.DictWriter(f, fieldnames=COMMENT_FIELDS)
             w.writeheader()
             w.writerows(comments_rows)
         log(f"      저장: {comments_path}  ({len(comments_rows)}행)")
@@ -484,10 +501,13 @@ def collect_channel(channel, max_videos=100, with_comments=False,
             try:
                 comment_info = fetch_video_detail(vid, True, max_comments)
                 for c in ((comment_info or {}).get("comments") or []):
+                    author_channel_id = c.get("author_channel_id") or c.get("author_id")
                     comments_rows.append({
                         "video_id": vid,
                         "video_title": info.get("title"),
                         "author": c.get("author"),
+                        "author_channel_id": author_channel_id,
+                        "is_channel_owner": bool(c.get("author_is_uploader")),
                         "text": (c.get("text") or "").replace("\n", " ").strip(),
                         "like_count": c.get("like_count"),
                         "timestamp": c.get("timestamp"),
@@ -520,9 +540,7 @@ def collect_channel(channel, max_videos=100, with_comments=False,
     if comments_rows:
         comments_path = os.path.join(data_dir, "comments.csv")
         with open(comments_path, "w", newline="", encoding="utf-8-sig") as f:
-            w = csv.DictWriter(
-                f, fieldnames=["video_id", "video_title", "author", "text",
-                               "like_count", "timestamp"])
+            w = csv.DictWriter(f, fieldnames=COMMENT_FIELDS)
             w.writeheader()
             w.writerows(comments_rows)
         log(f"      저장: {comments_path}  ({len(comments_rows)}행)")

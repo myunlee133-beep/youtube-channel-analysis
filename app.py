@@ -42,6 +42,9 @@ CHART_LABELS = {
     "05_comment_keywords.png": "댓글 키워드",
     "06_comment_wordcloud.png": "댓글 워드클라우드",
     "07_comment_sentiment.png": "댓글 감성 분포",
+    "08_product_question_intents.png": "제품 관심 질문 유형",
+    "09_product_keywords.png": "제품 관심 키워드",
+    "10_product_wordcloud.png": "제품 관심 워드클라우드",
 }
 
 
@@ -261,6 +264,60 @@ def read_text(path: Path, limit: int = 20000) -> str:
     return text[:limit]
 
 
+def product_record(row: pd.Series) -> dict:
+    return {
+        "intent": clean_text(row.get("product_intent")),
+        "score": clean_number(row.get("product_interest_score")),
+        "terms": clean_text(row.get("product_terms")),
+        "video_title": clean_text(row.get("video_title")),
+        "author": clean_text(row.get("author")),
+        "text": clean_text(row.get("text")),
+        "like_count": clean_number(row.get("like_count")),
+    }
+
+
+def product_interest_result(data_dir: Path, out_dir: Path) -> dict:
+    total_comments = count_comments(data_dir)
+    product_path = out_dir / "product_comments.csv"
+    if not product_path.exists():
+        return {
+            "available": False,
+            "total_comments": total_comments,
+            "count": 0,
+            "ratio": 0,
+            "intents": [],
+            "examples": [],
+            "markdown": "",
+        }
+    try:
+        product = pd.read_csv(product_path, engine="python")
+    except Exception:
+        product = pd.DataFrame()
+    count = int(len(product))
+    ratio = round((count / total_comments * 100), 1) if total_comments else 0
+    intents = []
+    if not product.empty and "product_intent" in product:
+        intents = [
+            {"name": str(name), "count": int(value)}
+            for name, value in product["product_intent"].value_counts().items()
+        ]
+    examples = []
+    if not product.empty:
+        sort_cols = [c for c in ["product_interest_score", "like_count"] if c in product]
+        if sort_cols:
+            product = product.sort_values(sort_cols, ascending=False, na_position="last")
+        examples = [product_record(row) for _, row in product.head(30).iterrows()]
+    return {
+        "available": True,
+        "total_comments": total_comments,
+        "count": count,
+        "ratio": ratio,
+        "intents": intents,
+        "examples": examples,
+        "markdown": read_text(out_dir / "product_comment_examples.md"),
+    }
+
+
 def build_run_result(run_id: str) -> dict:
     manifest = read_manifest(run_id)
     run_dir, data_dir, out_dir = run_paths(run_id)
@@ -312,6 +369,7 @@ def build_run_result(run_id: str) -> dict:
         "top_videos": top_videos,
         "recent_videos": recent_videos,
         "summary_markdown": read_text(out_dir / "summary.md"),
+        "product_interest": product_interest_result(data_dir, out_dir),
         "is_sample": run_id == SAMPLE_RUN_ID,
         "run_dir": None if run_id == SAMPLE_RUN_ID else str(run_dir),
     }
@@ -410,7 +468,10 @@ def run_pipeline(job_id: str) -> None:
             set_job(job, progress=86)
             append_log(job, "댓글 텍스트 분석")
             analyze.analyze_comments(str(data_dir), str(out_dir))
-            set_job(job, progress=92)
+            set_job(job, progress=90)
+            append_log(job, "제품 관심 댓글 분석")
+            analyze.analyze_product_comments(str(data_dir), str(out_dir))
+            set_job(job, progress=94)
             append_log(job, "요약 리포트 작성")
             analyze.write_summary(df, str(data_dir), str(out_dir))
 

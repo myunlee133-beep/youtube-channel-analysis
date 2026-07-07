@@ -34,6 +34,7 @@ const els = {
   resultActions: $("#resultActions"),
   metricGrid: $("#metricGrid"),
   summaryView: $("#summaryView"),
+  productView: $("#productView"),
   chartsView: $("#chartsView"),
   videosView: $("#videosView"),
   filesView: $("#filesView"),
@@ -344,6 +345,61 @@ function renderCharts(result) {
   `;
 }
 
+function renderProductInterest(result) {
+  const product = result.product_interest || {};
+  if (!product.available) {
+    els.productView.innerHTML = `
+      <section class="summary-box">
+        <p class="muted">제품 관심 댓글 분석 결과가 없습니다. 댓글 포함 옵션으로 다시 분석해보세요.</p>
+      </section>
+    `;
+    return;
+  }
+
+  const examples = product.examples?.length
+    ? product.examples.map((item) => `
+        <article class="example-card">
+          <div class="example-meta">
+            <strong>${escapeHtml(item.intent || "제품 질문")}</strong>
+            <span>score ${escapeHtml(item.score ?? "-")}</span>
+          </div>
+          <p>${escapeHtml(item.text || "")}</p>
+          <small>${escapeHtml(item.video_title || "")}</small>
+        </article>
+      `).join("")
+    : `<p class="muted">대표 댓글 예시가 없습니다.</p>`;
+
+  const intents = product.intents?.length
+    ? product.intents.map((item) => `
+        <div class="intent-row">
+          <span>${escapeHtml(item.name)}</span>
+          <strong>${fmtNumber(item.count)}</strong>
+        </div>
+      `).join("")
+    : `<p class="muted">유형 분포가 없습니다.</p>`;
+
+  els.productView.innerHTML = `
+    <div class="product-grid">
+      <section class="summary-box">
+        <h3>제품 관심 댓글</h3>
+        <div class="product-metrics">
+          <div><span>추출 댓글</span><strong>${fmtNumber(product.count)}개</strong></div>
+          <div><span>전체 대비</span><strong>${fmtPercent(product.ratio)}</strong></div>
+          <div><span>전체 댓글</span><strong>${fmtNumber(product.total_comments)}개</strong></div>
+        </div>
+      </section>
+      <section class="summary-box">
+        <h3>질문 유형</h3>
+        <div class="intent-list">${intents}</div>
+      </section>
+    </div>
+    <section class="table-panel example-panel">
+      <h3>대표 댓글 예시</h3>
+      <div class="example-list">${examples}</div>
+    </section>
+  `;
+}
+
 function renderVideos(result) {
   els.videosView.innerHTML = `
     <div class="table-stack">
@@ -411,6 +467,7 @@ function renderRun(result) {
   renderActions(result);
   renderMetrics(stats);
   renderSummary(result);
+  renderProductInterest(result);
   renderCharts(result);
   renderVideos(result);
   renderFiles(result);

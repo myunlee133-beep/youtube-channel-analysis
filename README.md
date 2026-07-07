@@ -19,6 +19,7 @@ python app.py
 - 웹 화면에서 진행 로그, 차트, 조회수 상위 영상, 최근 업로드 영상, CSV/Markdown 다운로드를 확인할 수 있습니다.
 - 댓글 수집은 오래 걸릴 수 있으므로 웹 옵션에서 댓글 영상 수와 영상당 댓글 수를 조절하세요.
 - `YOUTUBE_API_KEY` 환경변수가 있으면 yt-dlp 대신 공식 YouTube Data API v3로 수집합니다.
+- 댓글이 있으면 제품 구매처·가격·브랜드·사용감 질문을 자동 추출해 제품 관심 댓글 탭에서 보여줍니다. 채널 주인 댓글은 제외해 시청자 질문 중심으로 분석합니다.
 
 ## YouTube Data API 키 사용
 Render 같은 클라우드에서 yt-dlp가 막히면 공식 API 키 방식을 사용하세요.
@@ -100,6 +101,11 @@ python analyze.py
 | `05_comment_keywords.png` | 댓글 키워드 상위 25 |
 | `06_comment_wordcloud.png` | 댓글 워드클라우드 |
 | `07_comment_sentiment.png` | 댓글 단순 감성 분포 |
+| `08_product_question_intents.png` | 제품 관심 질문 유형, 제품 질문이 많은 영상 |
+| `09_product_keywords.png` | 제품 관심 댓글 키워드 |
+| `10_product_wordcloud.png` | 제품 관심 댓글 워드클라우드 |
+| `product_comments.csv` | 제품 관심 댓글 추출 결과 |
+| `product_comment_examples.md` | 대표 제품 질문 댓글 예시 |
 
 ## 3) 노트북
 셀 단위로 살펴보려면 `youtube_analysis.ipynb`를 여세요.
