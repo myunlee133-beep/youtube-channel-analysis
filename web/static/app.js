@@ -15,6 +15,8 @@ const els = {
   commentOptions: $("#commentOptions"),
   commentVideos: $("#commentVideosInput"),
   maxComments: $("#maxCommentsInput"),
+  maxCommentsButton: $("#maxCommentsButton"),
+  quotaEstimate: $("#quotaEstimate"),
   serverState: $("#serverState"),
   historyList: $("#historyList"),
   refreshRuns: $("#refreshRunsButton"),
@@ -74,6 +76,36 @@ function setServerState(text, tone = "idle") {
   els.serverState.style.color = color;
 }
 
+function clamp(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, number));
+}
+
+function estimateApiUnits(payload) {
+  const maxVideos = clamp(payload.maxVideos, 1, 500);
+  const videoPages = Math.ceil(maxVideos / 50);
+  let units = 1 + videoPages + videoPages;
+  if (payload.withComments) {
+    const commentVideos = clamp(payload.commentVideos, 1, 100);
+    const maxComments = clamp(payload.maxComments, 1, 500);
+    units += commentVideos * Math.ceil(maxComments / 100);
+  }
+  return units;
+}
+
+function renderQuotaEstimate() {
+  const payload = formPayload();
+  const units = estimateApiUnits(payload);
+  const runsPerDay = Math.floor(10000 / Math.max(1, units));
+  els.quotaEstimate.classList.toggle("warn", units >= 300 && units < 800);
+  els.quotaEstimate.classList.toggle("danger", units >= 800);
+  els.quotaEstimate.innerHTML = `
+    예상 API 사용량 <strong>${fmtNumber(units)} units</strong>
+    · 기본 10,000 units 기준 약 <strong>${fmtNumber(runsPerDay)}회/일</strong>
+  `;
+}
+
 async function fetchJSON(url, options = {}) {
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -91,6 +123,7 @@ function toggleCommentFields() {
   els.commentOptions.classList.toggle("enabled", enabled);
   els.commentVideos.disabled = !enabled;
   els.maxComments.disabled = !enabled;
+  renderQuotaEstimate();
 }
 
 function formPayload() {
@@ -102,6 +135,14 @@ function formPayload() {
     commentVideos: Number(els.commentVideos.value),
     maxComments: Number(els.maxComments.value),
   };
+}
+
+function setMaxCommentAnalysis() {
+  const maxVideos = clamp(els.maxVideos.value, 1, 500);
+  els.withComments.checked = true;
+  els.commentVideos.value = Math.min(maxVideos, 100);
+  els.maxComments.value = 500;
+  toggleCommentFields();
 }
 
 function showJobPanel() {
@@ -394,6 +435,12 @@ function setActiveView(name) {
 }
 
 els.withComments.addEventListener("change", toggleCommentFields);
+els.maxCommentsButton.addEventListener("click", setMaxCommentAnalysis);
+["input", "change"].forEach((eventName) => {
+  [els.maxVideos, els.commentVideos, els.maxComments].forEach((input) => {
+    input.addEventListener(eventName, renderQuotaEstimate);
+  });
+});
 els.refreshRuns.addEventListener("click", () => loadRuns().catch((error) => setServerState(error.message, "error")));
 els.historyList.addEventListener("click", (event) => {
   const button = event.target.closest(".history-item");
@@ -425,6 +472,7 @@ els.form.addEventListener("submit", async (event) => {
 });
 
 toggleCommentFields();
+renderQuotaEstimate();
 loadRuns()
   .then(() => setServerState("대기"))
   .catch((error) => {

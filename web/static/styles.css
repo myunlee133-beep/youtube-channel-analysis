@@ -231,6 +231,64 @@ form {
   background: #a8b0b2;
 }
 
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--teal);
+  border-radius: 7px;
+  background: #f0faf8;
+  color: var(--teal);
+  font-weight: 850;
+}
+
+.secondary-button:hover {
+  background: #e2f5f1;
+}
+
+.secondary-button span:first-child {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 22px;
+  border-radius: 5px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.quota-estimate {
+  min-height: 42px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.quota-estimate strong {
+  color: var(--ink);
+}
+
+.quota-estimate.warn {
+  border-color: rgba(179, 107, 0, 0.45);
+  background: #fff8ec;
+  color: #77500f;
+}
+
+.quota-estimate.danger {
+  border-color: rgba(199, 53, 47, 0.5);
+  background: #fff1f0;
+  color: #8d2b27;
+}
+
 .section-title {
   display: flex;
   align-items: center;
